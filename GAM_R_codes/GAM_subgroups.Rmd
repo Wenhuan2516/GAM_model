@@ -1,0 +1,273 @@
+---
+title: "GAM_group_combined"
+output: html_document
+date: "2024-07-03"
+---
+
+## Introduction
+<span> This is a full document to show the GAM model results in each subgroup for general public from 2000 to 2019. The subgroups are listed as below:
+<ul>
+<li>By age (age 15-34, 35-64, 65+ )  </li>
+<li>By race (white, black, other races) </li>
+<li>By gender (male, female) </li>
+<li>By median temperature (below median temperature, above median temperature) </li>
+<li>By average population (below median population, above median population) </li>
+<li>By regions (West, Midwest, Southwest, Southeast, Northeast) </li>
+<li>By altitude (below 500m, above 500m) </li>
+<li>By rurality (1-6 rurality codes, the bigger the code is, the more rural the areas are) </li>
+<li>By suicide means (firearm and non-firearm) </li>
+<li>By income (below median income, above median income) </li>
+</ul>
+</span>
+
+## Loading all the dataframes
+
+```{r}
+library(mgcv)
+# 1. This is the dataframe for all groups
+suicide_all_groups <-read.csv('~/Desktop/GAM_final/GAM_monthly_dataframes/monthly_GAM_all_groups.csv')
+
+# 2. This is the dataframe for age subgroup
+suicide_age_group <-read.csv('~/Desktop/GAM_final/GAM_monthly_dataframes/monthly_GAM_age_group_final.csv')
+
+# 3. This is the dataframe for gender subgroup
+suicide_gender_group <-read.csv('~/Desktop/GAM_final/GAM_monthly_dataframes/monthly_GAM_gender_group.csv')
+
+# 4. This is the dataframe for race subgroups
+suicide_race <-read.csv('~/Desktop/GAM_final/GAM_monthly_dataframes/monthly_GAM_race_group.csv')
+
+# 5. This is the dataframe for region subgroups
+suicide_region <-read.csv('~/Desktop/GAM_final/GAM_monthly_dataframes/monthly_GAM_region.csv')
+
+# 6. This is the dataframe for suicide means subgroups
+suicide_means <-read.csv('~/Desktop/GAM_final/GAM_monthly_dataframes/monthly_GAM_suicide_means.csv')
+
+```
+
+## Change the temperature unit from F to C
+```{r}
+# Load the dplyr package
+library(dplyr)
+# Define the function to convert Fahrenheit to Celsius
+fahrenheit_to_celsius <- function(fahrenheit) {
+  celsius <- (fahrenheit - 32) * 5/9
+  return(celsius)
+}
+
+suicide_all_groups <- suicide_all_groups %>%
+  mutate(tMean = fahrenheit_to_celsius(tMean))
+
+suicide_age_group <- suicide_age_group %>%
+  mutate(tMean = fahrenheit_to_celsius(tMean))
+
+suicide_gender_group <- suicide_gender_group %>%
+  mutate(tMean = fahrenheit_to_celsius(tMean))
+
+suicide_race <- suicide_race %>%
+  mutate(tMean = fahrenheit_to_celsius(tMean))
+
+suicide_region <- suicide_region %>%
+  mutate(tMean = fahrenheit_to_celsius(tMean))
+
+suicide_means <- suicide_means %>%
+  mutate(tMean = fahrenheit_to_celsius(tMean))
+```
+
+
+
+
+### Defining subgroup dataframe
+```{r}
+# 1. Dividing age dataframe - suicide_age_group by age_range
+suicide_1534 <- suicide_age_group[suicide_age_group$age == 'age 15-34',]
+suicide_3564 <- suicide_age_group[suicide_age_group$age == 'age 35-64',]
+suicide_over65 <- suicide_age_group[suicide_age_group$age == '65 and older',]
+
+# 2. Dividing gender dataframe - suicide_gender_group by gender
+suicide_male <- suicide_gender_group[suicide_gender_group$sex == 'Male',]
+suicide_female <- suicide_gender_group[suicide_gender_group$sex == 'Female',]
+
+# 3. Dividing race dataframe - suicide_race by race
+suicide_white <- suicide_race[suicide_race$race == 'White',]
+suicide_black <- suicide_race[suicide_race$race == 'Black',]
+suicide_other <- suicide_race[suicide_race$race == 'Other',]
+
+# 4. Dividing region dataframe - suicide_region by region
+suicide_west <- suicide_region[suicide_region$region == 'West',]
+
+suicide_midwest <- suicide_region[suicide_region$region == 'Midwest',]
+
+suicide_southwest <- suicide_region[suicide_region$region == 'Southwest',]
+
+suicide_southeast <- suicide_region[suicide_region$region == 'Southeast',]
+
+suicide_northeast <- suicide_region[suicide_region$region == 'Northeast',]
+
+# 5. Dividing suicide means dataframe - suicide_means by means
+suicide_firearm <- suicide_means[suicide_means$suicide_means == 'firearm_suicide',]
+
+suicide_nonfirearm <- suicide_means[suicide_means$suicide_means == 'nonfirearm_suicide',]
+```
+
+
+## Creating a function to run GAM model
+```{r}
+model_group <- function (df) {
+  model <- gam(suicide_rate ~ s(tMean), data = df)
+  return(model)
+}
+```
+
+
+```{r}
+add_vertical_line <- function(estimated_x) {
+  x_at_y0 <- estimated_x # This value is estimated from the plot
+  abline(v = x_at_y0, col = "blue", lty = 2)
+  #unit <- '°C'
+  text(x = x_at_y0, y = 0, labels = paste("x =", x_at_y0), pos = 3)
+}
+```
+
+
+```{r}
+plot_group <- function (model_df, group_name, df){
+  plot(model_df, select=1, rug = TRUE, main = paste(group_name), 
+       xlab = "Monthly Mean Temperature (°C)", ylab = "Change in Monthly Suicide Rate",
+       ylim = c(-0.3, 0.3))
+# add the line when y = 0
+  abline(h = 0, col = "red", lty = 1)
+  # Define a range of x-values to predict over
+  x_range <- seq(min(df$tMean), max(df$tMean), length.out = 1000)
+  x_values <- data.frame(tMean = x_range)
+  base_rate <- mean(df$suicide_rate)
+  # Predict y-values for the range of x-values
+  predictions <- predict(model_df, newdata=x_values, se.fit=TRUE)
+  y_values <- predictions$fit - base_rate
+  x_at_zero <- approx(y_values, x_range, xout = 0)$y
+  x_point <- round(x_at_zero, 1)
+  add_vertical_line(x_point)
+}
+
+```
+
+
+
+
+
+### 1. Run gam model for overall groups
+```{r}
+model_all_groups <- model_group(suicide_all_groups)
+group_name <- 'overall'
+plot_group(model_all_groups, group_name, suicide_all_groups)
+
+
+```
+
+### Add a vertical line at x when Y = 0 (the X value is estimated)
+```{r}
+add_vertical_line <- function(estimated_x) {
+  x_at_y0 <- estimated_x # This value is estimated from the plot
+  abline(v = x_at_y0, col = "blue", lty = 2)
+  #unit <- '°C'
+  text(x = x_at_y0, y = 0, labels = paste("x =", x_at_y0), pos = 3)
+}
+```
+
+### Plot the GAM model result in age subgroups
+```{r}
+# Setup the plotting area to arrange 3 plots in a single row
+par(mfrow = c(1, 3))
+model_age_1534 <- model_group(suicide_1534)
+group_name1 <- 'age 15-34'
+model_age_3564 <- model_group(suicide_3564)
+group_name2 <- 'age 35-64'
+model_age_over65 <- model_group(suicide_over65)
+group_name3 <- '65 and older'
+
+plot_group(model_age_1534, group_name1, suicide_1534)
+
+plot_group(model_age_3564, group_name2, suicide_3564)
+
+plot_group(model_age_over65, group_name3, suicide_over65)
+
+par(mfrow = c(1, 1))
+```
+
+### Plot the GAM model result in gender subgroups
+```{r}
+# Setup the plotting area to arrange 2 plots in a single row
+par(mfrow = c(1, 2))
+model_male <- model_group(suicide_male)
+group_name1 <- 'Male'
+model_female <- model_group(suicide_female)
+group_name2 <- 'Female'
+plot_group(model_male, group_name1, suicide_male)
+plot_group(model_female, group_name2, suicide_female)
+
+par(mfrow = c(1, 1))
+```
+
+### Plot the GAM model result in race subgroups
+```{r}
+# Setup the plotting area to arrange 3 plots in a single row
+par(mfrow = c(1, 3))
+model_white <- model_group(suicide_white)
+group_name1 <- 'White'
+model_black <- model_group(suicide_black)
+group_name2 <- 'Black'
+model_other <- model_group(suicide_other)
+group_name3 <- 'Other Races'
+plot_group(model_white, group_name1, suicide_white)
+
+plot_group(model_black, group_name2, suicide_black)
+
+plot_group(model_other, group_name3, suicide_other)
+
+par(mfrow = c(1, 1))
+```
+
+
+### Plot the GAM model result in region subgroups
+```{r}
+# Setup the plotting area to arrange 3 plots in a single row
+par(mfrow = c(2, 3))
+model_west <- model_group(suicide_west)
+group_name1 <- 'West'
+model_midwest <- model_group(suicide_midwest)
+group_name2 <- 'Midwest'
+model_southwest <- model_group(suicide_southwest)
+group_name3 <- 'Southwest'
+model_northeast <- model_group(suicide_northeast)
+group_name4 <- 'Northeast'
+model_southeast <- model_group(suicide_southeast)
+group_name5 <- 'Southeast'
+
+plot_group(model_west, group_name1, suicide_west)
+
+plot_group(model_midwest, group_name2, suicide_midwest)
+
+plot_group(model_southwest, group_name3, suicide_southwest)
+
+plot_group(model_northeast, group_name4, suicide_northeast)
+
+plot_group(model_southeast, group_name5,suicide_southeast)
+
+par(mfrow = c(1, 1))
+```
+
+### Plot the GAM model result in gender subgroups
+```{r}
+# Setup the plotting area to arrange 2 plots in a single row
+par(mfrow = c(1, 2))
+model_firearm <- model_group(suicide_firearm)
+group_name1 <- 'Firearm'
+model_nonfirearm <- model_group(suicide_nonfirearm)
+group_name2 <- 'Non-firearm'
+plot_group(model_firearm, group_name1, suicide_firearm)
+plot_group(model_nonfirearm, group_name2, suicide_nonfirearm)
+
+par(mfrow = c(1, 1))
+```
+
+
+

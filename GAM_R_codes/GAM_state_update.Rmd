@@ -1,0 +1,1738 @@
+---
+title: "GAM_state_update"
+output: html_document
+date: "2024-06-25"
+---
+
+```{r}
+# 1. This is the dataframe for all groups
+library(mgcv)
+library(segmented)
+suicide_state <-read.csv('~/Downloads/GAM_monthly_dataframes/monthly_GAM_state.csv')
+
+
+# Load the dplyr package
+library(dplyr)
+# Define the function to convert Fahrenheit to Celsius
+fahrenheit_to_celsius <- function(fahrenheit) {
+  celsius <- (fahrenheit - 32) * 5/9
+  return(celsius)
+}
+
+suicide_state <- suicide_state %>%
+  mutate(tMean = fahrenheit_to_celsius(tMean))
+```
+
+```{r}
+model_group <- function (df) {
+  model <- gam(suicide_rate ~ s(tMean), data = df)
+  return(model)
+}
+```
+
+
+```{r}
+add_vertical_line <- function(estimated_x) {
+  x_at_y0 <- estimated_x # This value is estimated from the plot
+  abline(v = x_at_y0, col = "blue", lty = 2)
+  #unit <- '°C'
+  text(x = x_at_y0, y = 0, labels = paste("x =", x_at_y0), pos = 3)
+}
+```
+
+## Create a function to find x0 when y_value is 0
+```{r}
+plot_group <- function (model_df, group_name, df){
+  plot(model_df, select=1, rug = TRUE, main = paste(group_name), 
+       xlab = "Monthly Mean Temperature (°C)", ylab = "Change in Monthly Suicide Rate",
+       ylim = c(-0.3, 0.3))
+  # add the line when y = 0
+  abline(h = 0, col = "red", lty = 1)
+  # Define a range of x-values to predict over
+  x_range <- seq(min(df$tMean), max(df$tMean), length.out = 1000)
+  x_values <- data.frame(tMean = x_range)
+  base_rate <- mean(df$suicide_rate)
+  # Predict y-values for the range of x-values
+  predictions <- predict(model_df, newdata=x_values, se.fit=TRUE)
+  y_values <- predictions$fit - base_rate
+  x_at_zero <- approx(y_values, x_range, xout = 0)$y
+  x_point <- round(x_at_zero, 1)
+  add_vertical_line(x_point)
+  
+  print(x_point)
+}
+
+```
+
+
+## Add a horizonal line at Y
+```{r}
+add_horizon_line <- function(estimated_y) {
+  abline(h = estimated_y, col = "red", lty = 1)
+}
+```
+
+```{r}
+state_list <- unique(suicide_state$state)
+print(state_list)
+
+```
+
+
+```{r}
+state_AL <- suicide_state[suicide_state$state == 'AL',]
+state_AZ <- suicide_state[suicide_state$state == 'AZ',]
+state_AR <- suicide_state[suicide_state$state == 'AR',]
+state_CA <- suicide_state[suicide_state$state == 'CA',]
+state_CO <- suicide_state[suicide_state$state == 'CO',]
+state_CT <- suicide_state[suicide_state$state == 'CT',]
+state_DE <- suicide_state[suicide_state$state == 'DE',]
+state_FL <- suicide_state[suicide_state$state == 'FL',]
+state_GA <- suicide_state[suicide_state$state == 'GA',]
+state_ID <- suicide_state[suicide_state$state == 'ID',]
+state_IL <- suicide_state[suicide_state$state == 'IL',]
+state_IN <- suicide_state[suicide_state$state == 'IN',]
+state_IA <- suicide_state[suicide_state$state == 'IA',]
+state_KS <- suicide_state[suicide_state$state == 'KS',]
+state_KY <- suicide_state[suicide_state$state == 'KY',]
+state_LA <- suicide_state[suicide_state$state == 'LA',]
+state_ME <- suicide_state[suicide_state$state == 'ME',]
+state_MD <- suicide_state[suicide_state$state == 'MD',]
+state_MA <- suicide_state[suicide_state$state == 'MA',]
+state_MI <- suicide_state[suicide_state$state == 'MI',]
+state_MN <- suicide_state[suicide_state$state == 'MN',]
+state_MS <- suicide_state[suicide_state$state == 'MS',]
+state_MO <- suicide_state[suicide_state$state == 'MO',]
+state_MT <- suicide_state[suicide_state$state == 'MT',]
+state_NE <- suicide_state[suicide_state$state == 'NE',]
+state_NV <- suicide_state[suicide_state$state == 'NV',]
+state_NH <- suicide_state[suicide_state$state == 'NH',]
+state_NJ <- suicide_state[suicide_state$state == 'NJ',]
+state_NM <- suicide_state[suicide_state$state == 'NM',]
+state_NY <- suicide_state[suicide_state$state == 'NY',]
+state_NC <- suicide_state[suicide_state$state == 'NC',]
+state_ND <- suicide_state[suicide_state$state == 'ND',]
+state_OH <- suicide_state[suicide_state$state == 'OH',]
+state_OK <- suicide_state[suicide_state$state == 'OK',]
+state_OR <- suicide_state[suicide_state$state == 'OR',]
+state_PA <- suicide_state[suicide_state$state == 'PA',]
+state_RI <- suicide_state[suicide_state$state == 'RI',]
+state_SC <- suicide_state[suicide_state$state == 'SC',]
+state_SD <- suicide_state[suicide_state$state == 'SD',]
+state_TN <- suicide_state[suicide_state$state == 'TN',]
+state_TX <- suicide_state[suicide_state$state == 'TX',]
+state_UT <- suicide_state[suicide_state$state == 'UT',]
+state_VT <- suicide_state[suicide_state$state == 'VT',]
+state_VA <- suicide_state[suicide_state$state == 'VA',]
+state_WA <- suicide_state[suicide_state$state == 'WA',]
+state_WV <- suicide_state[suicide_state$state == 'WV',]
+state_WI <- suicide_state[suicide_state$state == 'WI',]
+state_WY <- suicide_state[suicide_state$state == 'WY',]
+state_DC <- suicide_state[suicide_state$state == 'DC',]
+
+```
+
+
+```{r}
+library(dplyr)
+
+break_point <- function(df, point_list) {
+  min_x <- min(df$tMean)
+  max_x <- max(df$tMean)
+  min_max_df <- data.frame(tMean = c(min_x, max_x))
+  break_point_df <- data.frame(tMean = unlist(point_list))
+  x_values <- rbind(min_max_df[1, ], break_point_df, min_max_df[2, ])
+  base_rate <- mean(df$suicide_rate)
+  
+  model_state <- gam(suicide_rate ~ s(tMean), data = df)
+  
+  #[0, 3, 10, 20]
+  # Predict the y values and standard errors at the specified x values
+  predictions <- predict(model_state, newdata = x_values, se.fit = TRUE)
+
+  # Extract the fitted values and standard errors
+  fitted_values <- predictions$fit # suicide rate when temp at 0, 3, 10, 20 
+  y_values <- fitted_values - base_rate
+  standard_errors <- predictions$se.fit
+  y_values_upper <- fitted_values + 1.96 * standard_errors - base_rate
+  y_values_lower <- fitted_values - 1.96 * standard_errors - base_rate
+  
+  result_df <- x_values %>% mutate(fitted_values = fitted_values, standard_errors = standard_errors,
+                                   y_values = y_values, y_values_upper = y_values_upper, 
+                                   y_values_lower = y_values_lower)
+  
+  return(result_df)
+  
+}
+
+```
+
+
+```{r}
+calculate_slope_details <- function(x1, y1, y1_ci_upper, y1_ci_lower, x2, y2, y2_ci_upper, y2_ci_lower, base_rate) {
+  # Calculate the slope
+  slope <- (y2 - y1) / (x2 - x1)
+  
+  # Calculate the standard error of y1 and y2 using the CI upper and lower bounds
+  y1_se <- (y1_ci_upper - y1_ci_lower) / (2 * 1.96)
+  y2_se <- (y2_ci_upper - y2_ci_lower) / (2 * 1.96)
+  
+  # Propagate error for the slope using the standard error of y1 and y2
+  slope_se <- sqrt(y1_se^2 + y2_se^2) / (x2 - x1)
+  
+  # Calculate the 95% CI for the slope
+  slope_ci_upper <- slope + (1.96 * slope_se)
+  slope_ci_lower <- slope - (1.96 * slope_se)
+  
+  # Calculate the percentage increase based on the base rate
+  percentage_increase <- (slope / base_rate) * 100
+  # Calculate the standard error of the percentage increase (propagating from the slope's SE)
+  percentage_increase_se <- (slope_se / base_rate) * 100
+  
+  # Calculate the 95% CI for the percentage increase
+  percentage_increase_ci_upper <- percentage_increase + (1.96 * percentage_increase_se)
+  percentage_increase_ci_lower <- percentage_increase - (1.96 * percentage_increase_se)
+  
+  # Return a list containing the slope, CI for slope, percentage increase, and CI for percentage increase
+  return(list(
+    slope = slope,
+    slope_ci_upper = slope_ci_upper,
+    slope_ci_lower = slope_ci_lower,
+    percentage_increase = percentage_increase,
+    percentage_increase_ci_upper = percentage_increase_ci_upper,
+    percentage_increase_ci_lower = percentage_increase_ci_lower
+  ))
+}
+
+```
+
+
+```{r}
+create_interval_dataframe <- function(A) {
+  # Initialize an empty list to store results
+  result_list <- list()
+  
+  # Loop over the rows of the dataframe A
+  for (i in 1:(nrow(A) - 1)) {
+    # Extract values for the current interval
+    x1 <- A$x_values[i]
+    x2 <- A$x_values[i + 1]
+    y1 <- A$y_values[i]
+    y2 <- A$y_values[i + 1]
+    y1_ci_upper <- A$y_values_upper[i]
+    y1_ci_lower <- A$y_values_lower[i]
+    y2_ci_upper <- A$y_values_upper[i + 1]
+    y2_ci_lower <- A$y_values_lower[i + 1]
+    base_rate <- A$base_rate[i]
+    group_name <- A$group[i]  # Assuming the group name is the same for consecutive rows
+    
+    # Calculate slope details using the provided function
+    slope_details <- calculate_slope_details(
+      x1, y1, y1_ci_upper, y1_ci_lower,
+      x2, y2, y2_ci_upper, y2_ci_lower,
+      base_rate
+    )
+    
+    # Append the results to the list
+    result_list[[i]] <- data.frame(
+      group_name = group_name,
+      interval_start = x1,
+      interval_end = x2,
+      slope = slope_details$slope,
+      slope_ci_upper = slope_details$slope_ci_upper,
+      slope_ci_lower = slope_details$slope_ci_lower,
+      percentage_increase = slope_details$percentage_increase,
+      percentage_increase_ci_upper = slope_details$percentage_increase_ci_upper,
+      percentage_increase_ci_lower = slope_details$percentage_increase_ci_lower,
+      base_rate = base_rate
+    )
+  }
+  
+  # Combine the list into a dataframe
+  result_df <- do.call(rbind, result_list)
+  
+  return(result_df)
+}
+
+```
+
+
+## Create a function to break the graph to two part and then use a linear function to find the coefficients in each part when the graph is a non-linear graph
+
+```{r}
+library(segmented)
+convert_linear <- function(df, group_name) {
+  base_rate <- mean(df$suicide_rate)
+  model_df <- gam(suicide_rate ~s(tMean), data = df)
+  x_range <- seq(min(df$tMean), max(df$tMean), length.out = 1000)
+  x_values <- data.frame(tMean = x_range)
+  predictions <- predict(model_df, newdata=x_values, se.fit=TRUE)
+  change_in_suicide_rate <- predictions$fit - base_rate
+
+  result_df <- data.frame(x_range = x_range, change_in_suicide_rate = change_in_suicide_rate)
+  initial_model <- lm(change_in_suicide_rate ~ x_range, data = result_df)
+
+  # Apply the segmented function to identify breakpoints
+  segmented_model <- segmented(initial_model, seg.Z = ~x_range)
+
+  # Extract the breakpoints
+  breakpoints <- segmented_model$psi[, 2]
+
+  print(breakpoints)
+  
+
+  # Plot the segmented model
+  plot(result_df$x_range, result_df$change_in_suicide_rate, pch = 16, xlab = "Monthly Mean Temperature (°C)", ylab = "Change in Monthly Suicide Rate", ylim = c(-0.3, 0.3))
+  lines(result_df$x_range, fitted(segmented_model), col = "red")
+  add_vertical_line(round(breakpoints,2))
+
+  # Add vertical lines at breakpoints
+  abline(v = breakpoints, col = "blue", lty = 2)
+
+  segments <- cut(result_df$x_range, breaks = c(-Inf, breakpoints, Inf))
+  result_df$segment <- segments
+
+  segment_models <- result_df %>%
+    group_by(segment) %>%
+    do(model = lm(change_in_suicide_rate ~ x_range, data = .))
+
+  # Extract coefficients and confidence intervals
+  segment_coefficients <- segment_models %>%
+    summarise(
+      slope = coef(model)[2],
+      slope_ci_upper = confint(model)[2, 2],
+      slope_ci_lower = confint(model)[2, 1],
+    )
+
+  segment_coefficients <- segment_coefficients %>%
+    mutate(
+      percentage_increase = (slope / base_rate) * 100,
+      percentage_increase_ci_upper = (slope_ci_upper / base_rate) * 100,
+      percentage_increase_ci_lower = (slope_ci_lower / base_rate) * 100,
+      base_rate = base_rate
+    )
+
+  # Print the results
+  print(segment_coefficients)
+  return(segment_coefficients)
+  }
+
+```
+
+
+
+## 1. AL state
+```{r}
+model_AL <- model_group(state_AL)
+group_name1 <- 'AL'
+plot_group(model_AL, group_name1, state_AL)
+
+```
+```{r}
+interval_df_AL <- convert_linear(state_AL)
+
+```
+
+```{r}
+interval_df_AL$group_name <- 'AL'
+interval_breakpoint <- 17.99
+interval_start <- c(min(state_AL$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_AL$tMean))
+interval_df_AL$interval_start <- interval_start
+interval_df_AL$interval_end <- interval_end
+interval_df_AL <- interval_df_AL[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_AL
+
+```
+
+
+```{r}
+point_list_AL <- c(NA)
+result_df_AL <- break_point(state_AL, point_list_AL)
+result_df_AL$base_rate <- mean(state_AL$suicide_rate)
+result_df_AL$group <- 'AL'
+
+names(result_df_AL)[names(result_df_AL) == "tMean"] <- "x_values"
+result_df_AL <- na.omit(result_df_AL)
+print(result_df_AL)
+
+```
+
+
+
+## 2. AZ state
+```{r}
+model_AZ <- model_group(state_AZ)
+group_name1 <- 'AZ'
+plot_group(model_AZ, group_name1, state_AZ)
+```
+
+```{r}
+point_list_AZ <- c(NA)
+result_df_AZ <- break_point(state_AZ, point_list_AZ)
+result_df_AZ$base_rate <- mean(state_AZ$suicide_rate)
+result_df_AZ$group <- 'AZ'
+
+names(result_df_AZ)[names(result_df_AZ) == "tMean"] <- "x_values"
+result_df_AZ <- na.omit(result_df_AZ)
+print(result_df_AZ)
+
+interval_df_AZ <- create_interval_dataframe(result_df_AZ)
+print(interval_df_AZ)
+
+```
+
+
+## 3. CA state
+```{r}
+model_CA <- model_group(state_CA)
+group_name1 <- 'CA'
+plot_group(model_CA, group_name1, state_CA)
+
+```
+
+```{r}
+point_list_CA <- c(NA)
+result_df_CA <- break_point(state_CA, point_list_CA)
+result_df_CA$base_rate <- mean(state_CA$suicide_rate)
+result_df_CA$group <- 'CA'
+
+names(result_df_CA)[names(result_df_CA) == "tMean"] <- "x_values"
+result_df_CA <- na.omit(result_df_CA)
+print(result_df_CA)
+
+
+```
+
+```{r}
+interval_df_CA <- convert_linear(state_CA)
+
+```
+
+```{r}
+interval_df_CA$group_name <- 'CA'
+interval_breakpoint <- 20.95
+interval_start <- c(min(state_CA$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_CA$tMean))
+interval_df_CA$interval_start <- interval_start
+interval_df_CA$interval_end <- interval_end
+interval_df_CA <- interval_df_CA[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_CA
+
+```
+
+## 4. CO state
+```{r}
+model_CO <- model_group(state_CO)
+group_name1 <- 'CO'
+plot_group(model_CO, group_name1, state_CO)
+
+```
+
+```{r}
+point_list_CO <- c(NA)
+result_df_CO <- break_point(state_CO, point_list_CO)
+result_df_CO$base_rate <- mean(state_CO$suicide_rate)
+result_df_CO$group <- 'CO'
+
+names(result_df_CO)[names(result_df_CO) == "tMean"] <- "x_values"
+result_df_CO <- na.omit(result_df_CO)
+print(result_df_CO)
+
+interval_df_CO <- create_interval_dataframe(result_df_CO)
+print(interval_df_CO)
+
+```
+
+## 5. AR state
+```{r}
+model_AR <- model_group(state_AR)
+group_name1 <- 'AR'
+plot_group(model_AR, group_name1, state_AR)
+
+```
+
+```{r}
+point_list_AR <- c(NA)
+result_df_AR <- break_point(state_AR, point_list_AR)
+result_df_AR$base_rate <- mean(state_AR$suicide_rate)
+result_df_AR$group <- 'AR'
+
+names(result_df_AR)[names(result_df_AR) == "tMean"] <- "x_values"
+result_df_AR <- na.omit(result_df_AR)
+print(result_df_AR)
+
+interval_df_AR <- create_interval_dataframe(result_df_AR)
+print(interval_df_AR)
+
+```
+
+## 6. CT state
+```{r}
+model_CT <- model_group(state_CT)
+group_name1 <- 'CT'
+plot_group(model_CT, group_name1, state_CT)
+
+```
+
+```{r}
+point_list_CT <- c(NA)
+result_df_CT <- break_point(state_CT, point_list_CT)
+result_df_CT$base_rate <- mean(state_CT$suicide_rate)
+result_df_CT$group <- 'CT'
+
+names(result_df_CT)[names(result_df_CT) == "tMean"] <- "x_values"
+result_df_CT <- na.omit(result_df_CT)
+print(result_df_CT)
+
+interval_df_CT <- create_interval_dataframe(result_df_CT)
+print(interval_df_CT)
+
+```
+
+## 7. DE state
+```{r}
+model_DE <- model_group(state_DE)
+group_name1 <- 'DE'
+plot_group(model_DE, group_name1, state_DE)
+
+```
+
+```{r}
+point_list_DE <- c(NA)
+result_df_DE <- break_point(state_DE, point_list_DE)
+result_df_DE$base_rate <- mean(state_DE$suicide_rate)
+result_df_DE$group <- 'DE'
+
+names(result_df_DE)[names(result_df_DE) == "tMean"] <- "x_values"
+result_df_DE <- na.omit(result_df_DE)
+print(result_df_DE)
+
+interval_df_DE <- create_interval_dataframe(result_df_DE)
+print(interval_df_DE)
+
+```
+
+
+## 8. FL state
+```{r}
+model_FL <- model_group(state_FL)
+group_name1 <- 'FL'
+plot_group(model_FL, group_name1, state_FL)
+```
+
+```{r}
+point_list_FL <- c(NA)
+result_df_FL <- break_point(state_FL, point_list_FL)
+result_df_FL$base_rate <- mean(state_FL$suicide_rate)
+result_df_FL$group <- 'FL'
+
+names(result_df_FL)[names(result_df_FL) == "tMean"] <- "x_values"
+result_df_FL <- na.omit(result_df_FL)
+print(result_df_FL)
+
+interval_df_FL <- create_interval_dataframe(result_df_FL)
+print(interval_df_FL)
+
+```
+
+
+## 9. GA state
+```{r}
+model_GA <- model_group(state_GA)
+group_name1 <- 'GA'
+plot_group(model_GA, group_name1, state_GA)
+
+
+```
+
+```{r}
+interval_df_GA <- convert_linear(state_GA)
+
+```
+
+```{r}
+interval_df_GA$group_name <- 'GA'
+interval_breakpoint <- 13.71
+interval_start <- c(min(state_GA$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_GA$tMean))
+interval_df_GA$interval_start <- interval_start
+interval_df_GA$interval_end <- interval_end
+interval_df_GA <- interval_df_GA[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_GA
+
+```
+
+
+```{r}
+point_list_GA <- c(NA)
+result_df_GA <- break_point(state_GA, point_list_GA)
+result_df_GA$base_rate <- mean(state_GA$suicide_rate)
+result_df_GA$group <- 'GA'
+
+names(result_df_GA)[names(result_df_GA) == "tMean"] <- "x_values"
+result_df_GA <- na.omit(result_df_GA)
+print(result_df_GA)
+
+```
+
+## 10. ID state
+```{r}
+model_ID <- model_group(state_ID)
+group_name1 <- 'ID'
+plot_group(model_ID, group_name1, state_ID)
+
+```
+
+```{r}
+point_list_ID <- c(NA)
+result_df_ID <- break_point(state_ID, point_list_ID)
+result_df_ID$base_rate <- mean(state_ID$suicide_rate)
+result_df_ID$group <- 'ID'
+
+names(result_df_ID)[names(result_df_ID) == "tMean"] <- "x_values"
+result_df_ID <- na.omit(result_df_ID)
+print(result_df_ID)
+
+interval_df_ID <- create_interval_dataframe(result_df_ID)
+print(interval_df_ID)
+
+```
+## 11. IL state
+```{r}
+model_IL <- model_group(state_IL)
+group_name1 <- 'IL'
+plot_group(model_IL, group_name1, state_IL)
+
+```
+
+```{r}
+point_list_IL <- c(NA)
+result_df_IL <- break_point(state_IL, point_list_IL)
+result_df_IL$base_rate <- mean(state_IL$suicide_rate)
+result_df_IL$group <- 'IL'
+
+names(result_df_IL)[names(result_df_IL) == "tMean"] <- "x_values"
+result_df_IL <- na.omit(result_df_IL)
+print(result_df_IL)
+
+interval_df_IL <- create_interval_dataframe(result_df_IL)
+print(interval_df_IL)
+
+```
+
+## 12. IN state
+```{r}
+model_IN <- model_group(state_IN)
+group_name1 <- 'IN'
+plot_group(model_IN, group_name1, state_IN)
+```
+```{r}
+interval_df_IN <- convert_linear(state_IN)
+
+```
+
+
+```{r}
+interval_df_IN$group_name <- 'IN'
+interval_breakpoint <- 11.72
+interval_start <- c(min(state_IN$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_IN$tMean))
+interval_df_IN$interval_start <- interval_start
+interval_df_IN$interval_end <- interval_end
+interval_df_IN <- interval_df_IN[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_IN
+
+```
+
+
+
+```{r}
+point_list_IN <- c(NA)
+result_df_IN <- break_point(state_IN, point_list_IN)
+result_df_IN$base_rate <- mean(state_IN$suicide_rate)
+result_df_IN$group <- 'IN'
+
+names(result_df_IN)[names(result_df_IN) == "tMean"] <- "x_values"
+result_df_IN <- na.omit(result_df_IN)
+print(result_df_IN)
+
+```
+
+## 13. IA state
+```{r}
+model_IA <- model_group(state_IA)
+group_name1 <- 'IA'
+plot_group(model_IA, group_name1, state_IA)
+```
+
+```{r}
+point_list_IA <- c(NA)
+result_df_IA <- break_point(state_IA, point_list_IA)
+result_df_IA$base_rate <- mean(state_IA$suicide_rate)
+result_df_IA$group <- 'IA'
+
+names(result_df_IA)[names(result_df_IA) == "tMean"] <- "x_values"
+result_df_IA <- na.omit(result_df_IA)
+print(result_df_IA)
+
+interval_df_IA <- create_interval_dataframe(result_df_IA)
+print(interval_df_IA)
+
+```
+
+
+## 14. KS state
+```{r}
+model_KS <- model_group(state_KS)
+group_name1 <- 'KS'
+plot_group(model_KS, group_name1, state_KS)
+
+```
+
+```{r}
+point_list_KS <- c(NA)
+result_df_KS <- break_point(state_KS, point_list_KS)
+result_df_KS$base_rate <- mean(state_KS$suicide_rate)
+result_df_KS$group <- 'KS'
+
+names(result_df_KS)[names(result_df_KS) == "tMean"] <- "x_values"
+result_df_KS <- na.omit(result_df_KS)
+print(result_df_KS)
+
+interval_df_KS <- create_interval_dataframe(result_df_KS)
+print(interval_df_KS)
+
+```
+
+
+## 15. KY state
+```{r}
+model_KY <- model_group(state_KY)
+group_name1 <- 'KY'
+plot_group(model_KY, group_name1, state_KY)
+
+```
+
+```{r}
+point_list_KY <- c(NA)
+result_df_KY <- break_point(state_KY, point_list_KY)
+result_df_KY$base_rate <- mean(state_KY$suicide_rate)
+result_df_KY$group <- 'KY'
+
+names(result_df_KY)[names(result_df_KY) == "tMean"] <- "x_values"
+result_df_KY <- na.omit(result_df_KY)
+print(result_df_KY)
+
+interval_df_KY <- create_interval_dataframe(result_df_KY)
+print(interval_df_KY)
+
+```
+
+
+## 16. LA state
+```{r}
+model_LA <- model_group(state_LA)
+group_name1 <- 'LA'
+plot_group(model_LA, group_name1, state_LA)
+
+```
+
+
+```{r}
+point_list_LA <- c(NA)
+result_df_LA <- break_point(state_LA, point_list_LA)
+result_df_LA$base_rate <- mean(state_LA$suicide_rate)
+result_df_LA$group <- 'LA'
+
+names(result_df_LA)[names(result_df_LA) == "tMean"] <- "x_values"
+result_df_LA <- na.omit(result_df_LA)
+print(result_df_LA)
+
+interval_df_LA <- create_interval_dataframe(result_df_LA)
+print(interval_df_LA)
+
+```
+
+## 17. ME state
+```{r}
+model_ME <- model_group(state_ME)
+group_name1 <- 'ME'
+plot_group(model_ME, group_name1, state_ME)
+
+```
+
+```{r}
+point_list_ME <- c(NA)
+result_df_ME <- break_point(state_ME, point_list_ME)
+result_df_ME$base_rate <- mean(state_ME$suicide_rate)
+result_df_ME$group <- 'ME'
+
+names(result_df_ME)[names(result_df_ME) == "tMean"] <- "x_values"
+result_df_ME <- na.omit(result_df_ME)
+print(result_df_ME)
+
+interval_df_ME <- create_interval_dataframe(result_df_ME)
+print(interval_df_ME)
+
+```
+
+
+## 18. MD state
+```{r}
+model_MD <- model_group(state_MD)
+group_name1 <- 'MD'
+plot_group(model_MD, group_name1, state_MD)
+
+```
+
+```{r}
+point_list_MD <- c(NA)
+result_df_MD <- break_point(state_MD, point_list_MD)
+result_df_MD$base_rate <- mean(state_MD$suicide_rate)
+result_df_MD$group <- 'MD'
+
+names(result_df_MD)[names(result_df_MD) == "tMean"] <- "x_values"
+result_df_MD <- na.omit(result_df_MD)
+print(result_df_MD)
+
+interval_df_MD <- create_interval_dataframe(result_df_MD)
+print(interval_df_MD)
+
+```
+
+
+## 19. MA state
+```{r}
+model_MA <- model_group(state_MA)
+group_name1 <- 'MA'
+plot_group(model_MA, group_name1, state_MA)
+
+```
+
+```{r}
+point_list_MA <- c(NA)
+result_df_MA <- break_point(state_MA, point_list_MA)
+result_df_MA$base_rate <- mean(state_MA$suicide_rate)
+result_df_MA$group <- 'MA'
+
+names(result_df_MA)[names(result_df_MA) == "tMean"] <- "x_values"
+result_df_MA <- na.omit(result_df_MA)
+print(result_df_MA)
+
+```
+
+
+```{r}
+interval_df_MA <- convert_linear(state_MA)
+```
+
+```{r}
+interval_df_MA$group_name <- 'MA'
+interval_breakpoint <- 9.01
+interval_start <- c(min(state_MA$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_MA$tMean))
+interval_df_MA$interval_start <- interval_start
+interval_df_MA$interval_end <- interval_end
+interval_df_MA <- interval_df_MA[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_MA
+
+```
+
+
+## 20. MI state
+```{r}
+model_MI <- model_group(state_MI)
+group_name1 <- 'MI'
+plot_group(model_MI, group_name1, state_MI)
+```
+
+```{r}
+point_list_MI <- c(NA)
+result_df_MI <- break_point(state_MI, point_list_MI)
+result_df_MI$base_rate <- mean(state_MI$suicide_rate)
+result_df_MI$group <- 'MI'
+
+names(result_df_MI)[names(result_df_MI) == "tMean"] <- "x_values"
+result_df_MI <- na.omit(result_df_MI)
+print(result_df_MI)
+
+interval_df_MI <- create_interval_dataframe(result_df_MI)
+print(interval_df_MI)
+
+```
+
+## 21. MN state
+```{r}
+model_MN <- model_group(state_MN)
+group_name1 <- 'MN'
+plot_group(model_MN, group_name1, state_MN)
+
+```
+
+```{r}
+point_list_MN <- c(NA)
+result_df_MN <- break_point(state_MN, point_list_MN)
+result_df_MN$base_rate <- mean(state_MN$suicide_rate)
+result_df_MN$group <- 'MN'
+
+names(result_df_MN)[names(result_df_MN) == "tMean"] <- "x_values"
+result_df_MN <- na.omit(result_df_MN)
+print(result_df_MN)
+
+```
+
+```{r}
+interval_df_MN <- convert_linear(state_MN)
+```
+
+```{r}
+interval_df_MN$group_name <- 'MN'
+interval_breakpoint <- 5.73
+interval_start <- c(min(state_MN$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_MN$tMean))
+interval_df_MN$interval_start <- interval_start
+interval_df_MN$interval_end <- interval_end
+interval_df_MN <- interval_df_MN[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_MN
+
+```
+
+## 22. MS state
+```{r}
+model_MS <- model_group(state_MS)
+group_name1 <- 'MS'
+plot_group(model_MS, group_name1, state_MS)
+
+```
+
+```{r}
+point_list_MS <- c(NA)
+result_df_MS <- break_point(state_MS, point_list_MS)
+result_df_MS$base_rate <- mean(state_MS$suicide_rate)
+result_df_MS$group <- 'MS'
+
+names(result_df_MS)[names(result_df_MS) == "tMean"] <- "x_values"
+result_df_MS <- na.omit(result_df_MS)
+print(result_df_MS)
+
+interval_df_MS <- create_interval_dataframe(result_df_MS)
+print(interval_df_MS)
+
+```
+
+## 23. MO state
+```{r}
+model_MO <- model_group(state_MO)
+group_name1 <- 'MO'
+plot_group(model_MO, group_name1, state_MO)
+
+```
+
+```{r}
+point_list_MO <- c(NA)
+result_df_MO <- break_point(state_MO, point_list_MS)
+result_df_MO$base_rate <- mean(state_MO$suicide_rate)
+result_df_MO$group <- 'MO'
+
+names(result_df_MO)[names(result_df_MO) == "tMean"] <- "x_values"
+result_df_MO <- na.omit(result_df_MO)
+print(result_df_MO)
+
+interval_df_MO <- create_interval_dataframe(result_df_MO)
+print(interval_df_MO)
+
+```
+
+
+## 24. MT state
+```{r}
+model_MT <- model_group(state_MT)
+group_name1 <- 'MT'
+plot_group(model_MT, group_name1, state_MT)
+
+```
+
+```{r}
+point_list_MT <- c(NA)
+result_df_MT <- break_point(state_MT, point_list_MT)
+result_df_MT$base_rate <- mean(state_MT$suicide_rate)
+result_df_MT$group <- 'MT'
+
+names(result_df_MT)[names(result_df_MT) == "tMean"] <- "x_values"
+result_df_MT <- na.omit(result_df_MT)
+print(result_df_MT)
+
+interval_df_MT <- create_interval_dataframe(result_df_MT)
+print(interval_df_MT)
+
+```
+
+
+## 25. NE state
+```{r}
+model_NE <- model_group(state_NE)
+group_name1 <- 'NE'
+plot_group(model_NE, group_name1, state_NE)
+```
+
+```{r}
+point_list_NE <- c(NA)
+result_df_NE <- break_point(state_NE, point_list_NE)
+result_df_NE$base_rate <- mean(state_NE$suicide_rate)
+result_df_NE$group <- 'NE'
+
+names(result_df_NE)[names(result_df_NE) == "tMean"] <- "x_values"
+result_df_NE <- na.omit(result_df_NE)
+print(result_df_NE)
+
+interval_df_NE <- create_interval_dataframe(result_df_NE)
+print(interval_df_NE)
+
+```
+
+## 26. NV state
+```{r}
+model_NV <- model_group(state_NV)
+group_name1 <- 'NV'
+plot_group(model_NV, group_name1, state_NV)
+
+```
+
+```{r}
+point_list_NV <- c(NA)
+result_df_NV <- break_point(state_NV, point_list_NV)
+result_df_NV$base_rate <- mean(state_NV$suicide_rate)
+result_df_NV$group <- 'NV'
+
+names(result_df_NV)[names(result_df_NV) == "tMean"] <- "x_values"
+result_df_NV <- na.omit(result_df_NV)
+print(result_df_NV)
+
+```
+
+```{r}
+interval_df_NV <- convert_linear(state_NV)
+```
+
+```{r}
+interval_df_NV$group_name <- 'NV'
+interval_breakpoint <- 12.07
+interval_start <- c(min(state_NV$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_NV$tMean))
+interval_df_NV$interval_start <- interval_start
+interval_df_NV$interval_end <- interval_end
+interval_df_NV <- interval_df_NV[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_NV
+
+```
+
+
+## 27. NH state
+```{r}
+model_NH <- model_group(state_NH)
+group_name1 <- 'NH'
+plot_group(model_NH, group_name1, state_NH)
+
+```
+
+```{r}
+point_list_NH <- c(NA)
+result_df_NH <- break_point(state_NH, point_list_NH)
+result_df_NH$base_rate <- mean(state_NH$suicide_rate)
+result_df_NH$group <- 'NH'
+
+names(result_df_NH)[names(result_df_NH) == "tMean"] <- "x_values"
+result_df_NH <- na.omit(result_df_NH)
+print(result_df_NH)
+
+```
+
+```{r}
+interval_df_NH <- convert_linear(state_NH)
+
+```
+```{r}
+interval_df_NH$group_name <- 'NH'
+interval_breakpoint <- 11.72
+interval_start <- c(min(state_NH$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_NH$tMean))
+interval_df_NH$interval_start <- interval_start
+interval_df_NH$interval_end <- interval_end
+interval_df_NH <- interval_df_NH[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_NH
+
+```
+
+
+## 28. NJ state
+```{r}
+model_NJ <- model_group(state_NJ)
+group_name1 <- 'NJ'
+plot_group(model_NJ, group_name1, state_NJ)
+```
+
+```{r}
+point_list_NJ <- c(NA)
+result_df_NJ <- break_point(state_NJ, point_list_NJ)
+result_df_NJ$base_rate <- mean(state_NJ$suicide_rate)
+result_df_NJ$group <- 'NJ'
+
+names(result_df_NJ)[names(result_df_NJ) == "tMean"] <- "x_values"
+result_df_NJ <- na.omit(result_df_NJ)
+print(result_df_NJ)
+
+interval_df_NJ <- create_interval_dataframe(result_df_NJ)
+print(interval_df_NJ)
+
+```
+
+
+## 29. NM state
+```{r}
+model_NM <- model_group(state_NM)
+group_name1 <- 'NM'
+plot_group(model_NM, group_name1, state_NM)
+
+```
+
+```{r}
+point_list_NM <- c(NA)
+result_df_NM <- break_point(state_NM, point_list_NM)
+result_df_NM$base_rate <- mean(state_NM$suicide_rate)
+result_df_NM$group <- 'NM'
+
+names(result_df_NM)[names(result_df_NM) == "tMean"] <- "x_values"
+result_df_NM <- na.omit(result_df_NM)
+print(result_df_NM)
+
+interval_df_NM <- create_interval_dataframe(result_df_NM)
+print(interval_df_NM)
+
+```
+
+
+## 30. NY state
+```{r}
+model_NY <- model_group(state_NY)
+group_name1 <- 'NY'
+plot_group(model_NY, group_name1, state_NY)
+
+```
+
+```{r}
+point_list_NY <- c(NA)
+result_df_NY <- break_point(state_NY, point_list_NY)
+result_df_NY$base_rate <- mean(state_NY$suicide_rate)
+result_df_NY$group <- 'NY'
+
+names(result_df_NY)[names(result_df_NY) == "tMean"] <- "x_values"
+result_df_NY <- na.omit(result_df_NY)
+print(result_df_NY)
+
+interval_df_NY <- create_interval_dataframe(result_df_NY)
+print(interval_df_NY)
+
+```
+
+## 31. NC state
+```{r}
+model_NC <- model_group(state_NC)
+group_name1 <- 'NC'
+plot_group(model_NC, group_name1, state_NC)
+
+```
+
+```{r}
+point_list_NC <- c(NA)
+result_df_NC <- break_point(state_NC, point_list_NC)
+result_df_NC$base_rate <- mean(state_NC$suicide_rate)
+result_df_NC$group <- 'NC'
+
+names(result_df_NC)[names(result_df_NC) == "tMean"] <- "x_values"
+result_df_NC <- na.omit(result_df_NC)
+print(result_df_NC)
+
+interval_df_NC <- create_interval_dataframe(result_df_NC)
+print(interval_df_NC)
+
+```
+
+## 32. ND state
+```{r}
+model_ND <- model_group(state_ND)
+group_name1 <- 'ND'
+plot_group(model_ND, group_name1, state_ND)
+
+```
+
+```{r}
+point_list_ND <- c(NA)
+result_df_ND <- break_point(state_ND, point_list_ND)
+result_df_ND$base_rate <- mean(state_ND$suicide_rate)
+result_df_ND$group <- 'ND'
+
+names(result_df_ND)[names(result_df_ND) == "tMean"] <- "x_values"
+result_df_ND <- na.omit(result_df_ND)
+print(result_df_ND)
+
+interval_df_ND <- create_interval_dataframe(result_df_ND)
+print(interval_df_ND)
+
+```
+
+
+## 33. OH state
+```{r}
+model_OH <- model_group(state_OH)
+group_name1 <- 'OH'
+plot_group(model_OH, group_name1, state_OH)
+
+```
+
+
+```{r}
+point_list_OH <- c(NA)
+result_df_OH <- break_point(state_OH, point_list_OH)
+result_df_OH$base_rate <- mean(state_OH$suicide_rate)
+result_df_OH$group <- 'OH'
+
+names(result_df_OH)[names(result_df_OH) == "tMean"] <- "x_values"
+result_df_OH <- na.omit(result_df_OH)
+print(result_df_OH)
+
+interval_df_OH <- create_interval_dataframe(result_df_OH)
+print(interval_df_OH)
+
+```
+
+## 34. OK state
+```{r}
+model_OK <- model_group(state_OK)
+group_name1 <- 'OK'
+plot_group(model_OK, group_name1, state_OK)
+
+
+```
+
+```{r}
+point_list_OK <- c(NA)
+result_df_OK <- break_point(state_OK, point_list_OK)
+result_df_OK$base_rate <- mean(state_OK$suicide_rate)
+result_df_OK$group <- 'OK'
+
+names(result_df_OK)[names(result_df_OK) == "tMean"] <- "x_values"
+result_df_OK <- na.omit(result_df_OK)
+print(result_df_OK)
+
+```
+
+```{r}
+interval_df_OK <- convert_linear(state_OK)
+
+```
+```{r}
+interval_df_OK$group_name <- 'OK'
+interval_breakpoint <- 5.63
+interval_start <- c(min(state_OK$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_OK$tMean))
+interval_df_OK$interval_start <- interval_start
+interval_df_OK$interval_end <- interval_end
+interval_df_OK <- interval_df_OK[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_OK
+
+```
+
+
+## 35. OR state
+```{r}
+model_OR <- model_group(state_OR)
+group_name1 <- 'OR'
+plot_group(model_OR, group_name1, state_OR)
+
+```
+
+```{r}
+point_list_OR <- c(NA)
+result_df_OR <- break_point(state_OR, point_list_OR)
+result_df_OR$base_rate <- mean(state_OR$suicide_rate)
+result_df_OR$group <- 'OR'
+
+names(result_df_OR)[names(result_df_OR) == "tMean"] <- "x_values"
+result_df_OR <- na.omit(result_df_OR)
+print(result_df_OR)
+
+interval_df_OR <- create_interval_dataframe(result_df_OR)
+print(interval_df_OR)
+
+```
+
+## 36. PA state
+```{r}
+model_PA <- model_group(state_PA)
+group_name1 <- 'PA'
+plot_group(model_PA, group_name1, state_PA)
+
+```
+
+```{r}
+point_list_PA <- c(NA)
+result_df_PA <- break_point(state_PA, point_list_PA)
+result_df_PA$base_rate <- mean(state_PA$suicide_rate)
+result_df_PA$group <- 'PA'
+
+names(result_df_PA)[names(result_df_PA) == "tMean"] <- "x_values"
+result_df_PA <- na.omit(result_df_PA)
+print(result_df_PA)
+
+interval_df_PA <- create_interval_dataframe(result_df_PA)
+print(interval_df_PA)
+
+```
+
+
+## 37. RI state
+```{r}
+model_RI <- model_group(state_RI)
+group_name1 <- 'RI'
+plot_group(model_RI, group_name1, state_RI)
+
+```
+
+```{r}
+point_list_RI <- c(NA)
+result_df_RI <- break_point(state_RI, point_list_RI)
+result_df_RI$base_rate <- mean(state_RI$suicide_rate)
+result_df_RI$group <- 'RI'
+
+names(result_df_RI)[names(result_df_RI) == "tMean"] <- "x_values"
+result_df_RI <- na.omit(result_df_RI)
+print(result_df_RI)
+
+interval_df_RI <- create_interval_dataframe(result_df_RI)
+print(interval_df_RI)
+
+```
+
+## 38. SC state
+```{r}
+model_SC <- model_group(state_SC)
+group_name1 <- 'SC'
+plot_group(model_SC, group_name1, state_SC)
+
+```
+
+```{r}
+point_list_SC <- c(NA)
+result_df_SC <- break_point(state_SC, point_list_SC)
+result_df_SC$base_rate <- mean(state_SC$suicide_rate)
+result_df_SC$group <- 'SC'
+
+names(result_df_SC)[names(result_df_SC) == "tMean"] <- "x_values"
+result_df_SC <- na.omit(result_df_SC)
+print(result_df_SC)
+```
+
+```{r}
+interval_df_SC <- convert_linear(state_SC)
+
+```
+```{r}
+interval_df_SC$group_name <- 'SC'
+interval_breakpoint <- 17.34
+interval_start <- c(min(state_SC$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_SC$tMean))
+interval_df_SC$interval_start <- interval_start
+interval_df_SC$interval_end <- interval_end
+interval_df_SC <- interval_df_SC[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_SC
+
+```
+
+
+## 39. SD state
+```{r}
+model_SD <- model_group(state_SD)
+group_name1 <- 'SD'
+plot_group(model_SD, group_name1, state_SD)
+```
+
+```{r}
+point_list_SD <- c(NA)
+result_df_SD <- break_point(state_SD, point_list_SD)
+result_df_SD$base_rate <- mean(state_SD$suicide_rate)
+result_df_SD$group <- 'SD'
+
+names(result_df_SD)[names(result_df_SD) == "tMean"] <- "x_values"
+result_df_SD <- na.omit(result_df_SD)
+print(result_df_SD)
+
+interval_df_SD <- create_interval_dataframe(result_df_SD)
+print(interval_df_SD)
+
+```
+
+
+## 40. TN state
+```{r}
+model_TN <- model_group(state_TN)
+group_name1 <- 'TN'
+plot_group(model_TN, group_name1, state_TN)
+
+```
+
+```{r}
+point_list_TN <- c(NA)
+result_df_TN <- break_point(state_TN, point_list_TN)
+result_df_TN$base_rate <- mean(state_TN$suicide_rate)
+result_df_TN$group <- 'TN'
+
+names(result_df_TN)[names(result_df_TN) == "tMean"] <- "x_values"
+result_df_TN <- na.omit(result_df_TN)
+print(result_df_TN)
+
+interval_df_TN <- create_interval_dataframe(result_df_TN)
+print(interval_df_TN)
+
+```
+
+## 41. TX state
+```{r}
+model_TX <- model_group(state_TX)
+group_name1 <- 'TX'
+plot_group(model_TX, group_name1, state_TX)
+
+```
+
+```{r}
+point_list_TX <- c(NA)
+result_df_TX <- break_point(state_TX, point_list_TX)
+result_df_TX$base_rate <- mean(state_TX$suicide_rate)
+result_df_TX$group <- 'TX'
+
+names(result_df_TX)[names(result_df_TX) == "tMean"] <- "x_values"
+result_df_TX <- na.omit(result_df_TX)
+print(result_df_TX)
+
+interval_df_TX <- create_interval_dataframe(result_df_TX)
+print(interval_df_TX)
+
+```
+
+
+## 42. UT state
+```{r}
+model_UT <- model_group(state_UT)
+group_name1 <- 'UT'
+plot_group(model_UT, group_name1, state_UT)
+
+```
+
+```{r}
+point_list_UT <- c(NA)
+result_df_UT <- break_point(state_UT, point_list_UT)
+result_df_UT$base_rate <- mean(state_UT$suicide_rate)
+result_df_UT$group <- 'UT'
+
+names(result_df_UT)[names(result_df_UT) == "tMean"] <- "x_values"
+result_df_UT <- na.omit(result_df_UT)
+print(result_df_UT)
+
+```
+
+```{r}
+interval_df_UT <- convert_linear(state_UT)
+
+```
+
+```{r}
+interval_df_UT$group_name <- 'UT'
+interval_breakpoint <- 6.57
+interval_start <- c(min(state_UT$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_UT$tMean))
+interval_df_UT$interval_start <- interval_start
+interval_df_UT$interval_end <- interval_end
+interval_df_UT <- interval_df_UT[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_UT
+
+```
+
+
+## 43. VT state
+```{r}
+model_VT <- model_group(state_VT)
+group_name1 <- 'VT'
+plot_group(model_VT, group_name1, state_VT)
+
+```
+
+```{r}
+point_list_VT <- c(NA)
+result_df_VT <- break_point(state_VT, point_list_VT)
+result_df_VT$base_rate <- mean(state_VT$suicide_rate)
+result_df_VT$group <- 'VT'
+
+names(result_df_VT)[names(result_df_VT) == "tMean"] <- "x_values"
+result_df_VT <- na.omit(result_df_VT)
+print(result_df_VT)
+
+```
+
+
+```{r}
+interval_df_VT <- convert_linear(state_VT)
+```
+
+```{r}
+interval_df_VT$group_name <- 'VT'
+interval_breakpoint <- 5.99
+interval_start <- c(min(state_VT$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_VT$tMean))
+interval_df_VT$interval_start <- interval_start
+interval_df_VT$interval_end <- interval_end
+interval_df_VT <- interval_df_VT[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_VT
+
+```
+
+
+## 44. VA state
+```{r}
+model_VA <- model_group(state_VA)
+group_name1 <- 'VA'
+plot_group(model_VA, group_name1, state_VA)
+
+```
+
+```{r}
+point_list_VA <- c(NA)
+result_df_VA <- break_point(state_VA, point_list_VA)
+result_df_VA$base_rate <- mean(state_VA$suicide_rate)
+result_df_VA$group <- 'VA'
+
+names(result_df_VA)[names(result_df_VA) == "tMean"] <- "x_values"
+result_df_VA <- na.omit(result_df_VA)
+print(result_df_VA)
+
+```
+
+```{r}
+interval_df_VA <- convert_linear(state_VA)
+```
+
+```{r}
+interval_df_VA$group_name <- 'VA'
+interval_breakpoint <- 5.41
+interval_start <- c(min(state_VA$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_VA$tMean))
+interval_df_VA$interval_start <- interval_start
+interval_df_VA$interval_end <- interval_end
+interval_df_VA <- interval_df_VA[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_VA
+
+```
+
+## 45. WA state
+```{r}
+model_WA <- model_group(state_WA)
+group_name1 <- 'WA'
+plot_group(model_WA, group_name1, state_WA)
+
+
+```
+
+
+```{r}
+point_list_WA <- c(NA)
+result_df_WA <- break_point(state_WA, point_list_WA)
+result_df_WA$base_rate <- mean(state_WA$suicide_rate)
+result_df_WA$group <- 'WA'
+
+names(result_df_WA)[names(result_df_WA) == "tMean"] <- "x_values"
+result_df_WA <- na.omit(result_df_WA)
+print(result_df_WA)
+
+interval_df_WA <- create_interval_dataframe(result_df_WA)
+print(interval_df_WA)
+
+```
+
+
+## 46. WV state
+```{r}
+model_WV <- model_group(state_WV)
+group_name1 <- 'WV'
+plot_group(model_WV, group_name1, state_WV)
+```
+
+```{r}
+point_list_WV <- c(NA)
+result_df_WV <- break_point(state_WV, point_list_WV)
+result_df_WV$base_rate <- mean(state_WV$suicide_rate)
+result_df_WV$group <- 'WV'
+
+names(result_df_WV)[names(result_df_WV) == "tMean"] <- "x_values"
+result_df_WV <- na.omit(result_df_WV)
+print(result_df_WV)
+
+interval_df_WV <- create_interval_dataframe(result_df_WV)
+print(interval_df_WV)
+
+```
+
+## 47. WI state
+```{r}
+model_WI <- model_group(state_WI)
+group_name1 <- 'WI'
+plot_group(model_WI, group_name1, state_WI)
+
+```
+
+```{r}
+point_list_WI <- c(NA)
+result_df_WI <- break_point(state_WI, point_list_WI)
+result_df_WI$base_rate <- mean(state_WI$suicide_rate)
+result_df_WI$group <- 'WI'
+
+names(result_df_WI)[names(result_df_WI) == "tMean"] <- "x_values"
+result_df_WI <- na.omit(result_df_WI)
+print(result_df_WI)
+
+```
+
+```{r}
+interval_df_WI <- convert_linear(state_WI)
+```
+
+```{r}
+interval_df_WI$group_name <- 'WI'
+interval_breakpoint <- 4.08
+interval_start <- c(min(state_WI$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_WI$tMean))
+interval_df_WI$interval_start <- interval_start
+interval_df_WI$interval_end <- interval_end
+interval_df_WI <- interval_df_WI[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_WI
+
+```
+
+## 48. WY state
+```{r}
+model_WY <- model_group(state_WY)
+group_name1 <- 'WY'
+plot_group(model_WY, group_name1, state_WY)
+
+```
+
+```{r}
+point_list_WY <- c(NA)
+result_df_WY <- break_point(state_WY, point_list_WY)
+result_df_WY$base_rate <- mean(state_WY$suicide_rate)
+result_df_WY$group <- 'WY'
+
+names(result_df_WY)[names(result_df_WY) == "tMean"] <- "x_values"
+result_df_WY <- na.omit(result_df_WY)
+print(result_df_WY)
+
+interval_df_WY <- create_interval_dataframe(result_df_WY)
+print(interval_df_WY)
+
+```
+
+## 49. DC state
+```{r}
+model_DC <- model_group(state_DC)
+group_name1 <- 'DC'
+plot_group(model_DC, group_name1, state_DC)
+
+```
+
+```{r}
+point_list_DC <- c(NA)
+result_df_DC <- break_point(state_DC, point_list_DC)
+result_df_DC$base_rate <- mean(state_DC$suicide_rate)
+result_df_DC$group <- 'DC'
+
+names(result_df_DC)[names(result_df_DC) == "tMean"] <- "x_values"
+result_df_DC <- na.omit(result_df_DC)
+print(result_df_DC)
+
+```
+
+```{r}
+interval_df_DC <- convert_linear(state_DC)
+```
+```{r}
+interval_df_DC$group_name <- 'DC'
+interval_breakpoint <- 12.18
+interval_start <- c(min(state_DC$tMean), interval_breakpoint)
+interval_end <- c(interval_breakpoint, max(state_DC$tMean))
+interval_df_DC$interval_start <- interval_start
+interval_df_DC$interval_end <- interval_end
+interval_df_DC <- interval_df_DC[, c('group_name', 'interval_start', 'interval_end', 'slope', 'slope_ci_upper', 'slope_ci_lower', 'percentage_increase', 'percentage_increase_ci_upper', 'percentage_increase_ci_lower', 'base_rate')]
+interval_df_DC
+
+```
+
+
+```{r}
+df_list_point <- list(result_df_AL, result_df_AZ,result_df_AR,
+                      result_df_CA, result_df_CO, result_df_CT, 
+                      result_df_DE, result_df_FL, result_df_GA, 
+                      result_df_ID, result_df_IL, result_df_IN, 
+                      result_df_IA, result_df_KS, result_df_KY, 
+                      result_df_LA, result_df_ME, result_df_MD,
+                      result_df_MA, result_df_MI, result_df_MN,
+                      result_df_MS, result_df_MO, result_df_MT,
+                      result_df_NE, result_df_NV, result_df_NH,
+                      result_df_NJ, result_df_NM, result_df_NY,
+                      result_df_NC, result_df_ND, result_df_OH,
+                      result_df_OK, result_df_OR, result_df_PA, 
+                      result_df_RI, result_df_SC, result_df_SD,
+                      result_df_TN, result_df_TX, result_df_UT,
+                      result_df_VT, result_df_VA, result_df_WA,
+                      result_df_WV, result_df_WI, result_df_WY,
+                      result_df_DC)
+
+# Use do.call with rbind to combine the list of data frames
+point_combined_df <- do.call(rbind, df_list_point)
+
+print(point_combined_df)
+
+```
+
+
+```{r}
+df_list_interval <- list(interval_df_AL, interval_df_AZ,interval_df_AR,
+                      interval_df_CA, interval_df_CO, interval_df_CT, 
+                      interval_df_DE, interval_df_FL, interval_df_GA, 
+                      interval_df_ID, interval_df_IL, interval_df_IN, 
+                      interval_df_IA, interval_df_KS, interval_df_KY, 
+                      interval_df_LA, interval_df_ME, interval_df_MD,
+                      interval_df_MA, interval_df_MI, interval_df_MN,
+                      interval_df_MS, interval_df_MO, interval_df_MT,
+                      interval_df_NE, interval_df_NV, interval_df_NH,
+                      interval_df_NJ, interval_df_NM, interval_df_NY,
+                      interval_df_NC, interval_df_ND, interval_df_OH,
+                      interval_df_OK, interval_df_OR, interval_df_PA, 
+                      interval_df_RI, interval_df_SC, interval_df_SD,
+                      interval_df_TN, interval_df_TX, interval_df_UT,
+                      interval_df_VT, interval_df_VA, interval_df_WA,
+                      interval_df_WV, interval_df_WI, interval_df_WY,
+                      interval_df_DC)
+
+# Use do.call with rbind to combine the list of data frames
+interval_combined_df <- do.call(rbind, df_list_interval)
+
+print(interval_combined_df)
+
+```
+
+```{r}
+# Save the data frame to a CSV file
+write.csv(point_combined_df, file = '~/Desktop/GAM_final/GAM_model_breakpoints_state.csv', row.names = FALSE)
+write.csv(interval_combined_df, file = '~/Desktop/GAM_final/GAM_model_percent_increase_state.csv', row.names = FALSE)
+```
+
+
+
